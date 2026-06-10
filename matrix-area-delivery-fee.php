@@ -106,6 +106,36 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             WC()->cart->add_fee(__('Delivery Fee', 'matrix-area-delivery-fee'), 0);
         }
     });
+
+    /**
+     * Fix: Re-initialise CyberSource Unified Checkout after WooCommerce checkout updates.
+     * When billing_city (delivery area) changes, WC fires updated_checkout which replaces
+     * the payment fragment. This script re-triggers payment_method_selected after the DOM
+     * settles so the CyberSource widget (Google Pay / Apple Pay / card form) re-mounts.
+     */
+    add_action('wp_footer', function() {
+        if (!is_checkout()) return;
+        ?>
+        <script>
+        (function($) {
+            var matrixCsReinit = null;
+            $(document.body).on('updated_checkout', function() {
+                // Clear any pending reinit
+                if (matrixCsReinit) clearTimeout(matrixCsReinit);
+                // Wait 400ms for CyberSource widget to finish its own updated_checkout handler,
+                // then re-trigger payment_method_selected to force a clean re-mount
+                matrixCsReinit = setTimeout(function() {
+                    var $paymentInput = $('input[name="payment_method"]:checked');
+                    if ($paymentInput.length && $paymentInput.val().indexOf('visa_acceptance') !== -1) {
+                        $(document.body).trigger('payment_method_selected');
+                    }
+                }, 600);
+            });
+        })(jQuery);
+        </script>
+        <?php
+    });
+    
     
 } else {
     // Show admin notice if WooCommerce is not active
