@@ -2,6 +2,16 @@
 
 All notable changes to Matrix Area Based Delivery Fee Customizer will be documented in this file.
 
+## [2.0.1] - 2026-07-16
+
+### Removed
+- The nested `matrix-area-delivery-fee/` folder — an accidental full copy
+  of the plugin committed with the initial import (a zip-extract artifact).
+  It never loaded as a plugin (WordPress scans only one level deep) but it
+  duplicated every file on deploy and was a stale-version trap. The repo
+  root IS the plugin; build release zips from the root when needed.
+  No plugin code changes.
+
 ## [2.0.0] - 2026-07-16
 
 ### Changed (architecture refactor — deploy together with TCC Qatar Custom 1.10.0)
