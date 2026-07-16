@@ -2,6 +2,14 @@
 
 All notable changes to Matrix Area Based Delivery Fee Customizer will be documented in this file.
 
+## [2.0.2] - 2026-07-16
+
+### Fixed
+- **Arabic pages showed English strings.** "Select Delivery Area" (dropdown
+  placeholder), the invalid-area validation message, and the "Delivery Fee"
+  shipping rate label now render in Arabic on `ar_*` locales (اختر منطقة
+  التوصيل / رسوم التوصيل). The bilingual field label was already correct.
+
 ## [2.0.1] - 2026-07-16
 
 ### Removed

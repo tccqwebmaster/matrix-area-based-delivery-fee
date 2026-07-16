@@ -94,10 +94,17 @@ class Matrix_Area_Delivery_Method extends WC_Shipping_Method {
 			? (string) $package['matrix_delivery_area']
 			: $areas->get_selected_area();
 
+		// The stored method title is language-neutral; when the default
+		// English title is in use, show Arabic on Arabic pages.
+		$label = $this->title;
+		if ( Matrix_Delivery_Area::is_arabic() && __( 'Delivery Fee', 'matrix-area-delivery-fee' ) === $label ) {
+			$label = 'رسوم التوصيل';
+		}
+
 		$this->add_rate(
 			array(
 				'id'      => $this->id . ( $this->instance_id ? '_' . $this->instance_id : '' ),
-				'label'   => $this->title,
+				'label'   => $label,
 				'cost'    => '' !== $city ? $areas->get_fee( $city ) : 0,
 				'package' => $package,
 			)

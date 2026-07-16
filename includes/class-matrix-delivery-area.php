@@ -161,7 +161,7 @@ class Matrix_Delivery_Area {
 	 */
 	public function get_options() {
 		$options = array(
-			'' => __( 'Select Delivery Area', 'matrix-area-delivery-fee' ),
+			'' => self::is_arabic() ? 'اختر منطقة التوصيل' : __( 'Select Delivery Area', 'matrix-area-delivery-fee' ),
 		);
 
 		foreach ( $this->get_areas() as $area ) {
@@ -175,11 +175,22 @@ class Matrix_Delivery_Area {
 
 	/**
 	 * The Delivery Area field label (single definition, reused everywhere).
+	 * Bilingual by design — readable in both store languages.
 	 *
 	 * @return string
 	 */
 	public static function field_label() {
 		return __( 'Delivery Area – منطقة التوصيل', 'matrix-area-delivery-fee' );
+	}
+
+	/**
+	 * Whether the current request renders in Arabic (WPML sets the locale
+	 * per language).
+	 *
+	 * @return bool
+	 */
+	public static function is_arabic() {
+		return 0 === strpos( (string) get_locale(), 'ar' );
 	}
 
 	/**
@@ -277,7 +288,9 @@ class Matrix_Delivery_Area {
 		if ( '' !== $city && null === $this->get_area( $city ) ) {
 			$errors->add(
 				'matrix_delivery_area_invalid',
-				__( 'Please select a valid Delivery Area from the list.', 'matrix-area-delivery-fee' )
+				self::is_arabic()
+					? 'يرجى اختيار منطقة توصيل صحيحة من القائمة.'
+					: __( 'Please select a valid Delivery Area from the list.', 'matrix-area-delivery-fee' )
 			);
 		}
 	}
