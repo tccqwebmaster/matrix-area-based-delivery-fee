@@ -1,6 +1,6 @@
 # Matrix Area Based Delivery Fee Customizer
 
-**Version:** 1.2.0  
+**Version:** 2.0.0  
 **Author:** Mugamathu Bathusha  
 **License:** GPL v2 or later
 
@@ -8,11 +8,43 @@ A professional WordPress plugin for managing WooCommerce area-based delivery fee
 
 ---
 
+## Scope & architecture (2.0.0)
+
+This plugin is responsible **only** for shipping/delivery:
+
+- A real WooCommerce **shipping method** (`matrix_area_delivery`, zone-aware,
+  auto-attached to the Qatar zone) whose cost comes from the selected area
+- The **Delivery Area dropdown** (the `billing_city` field — kept on
+  billing_city for compatibility with WooCommerce addresses, shipping zones,
+  Conditional Payments, HPOS and checkout AJAX)
+- Surfacing the area on orders: order edit screen, orders-list column
+  (HPOS + legacy), emails, My Account order view, and REST API order
+  `meta_data` (`_matrix_delivery_area`, `_matrix_delivery_area_label`)
+
+All other checkout field customisation (removing Company/State/Postcode,
+required Phone, field order, labels) lives in the **TCC Qatar Custom**
+plugin. One owner per field — that contract is what keeps the checkout
+stable across AJAX refreshes. Do not add checkout-field code here.
+
+```
+matrix-area-delivery-fee.php            Bootstrap: constants, HPOS declare,
+                                        shipping method registration, Qatar
+                                        zone auto-setup
+includes/class-matrix-delivery-area.php Area repository + dropdown + order
+                                        meta/columns/emails/REST surfacing
+includes/class-matrix-shipping-method.php  WC_Shipping_Method subclass
+                                        (loaded on woocommerce_shipping_init)
+includes/class-matrix-admin.php         Admin UI (areas, CSV, backup)
+```
+
+---
+
 ## Features
 
 ✅ Converts billing_city field to dropdown select  
 ✅ Admin interface to manage delivery areas  
-✅ **Automatic shipping fee calculation based on delivery area**  
+✅ **Real WooCommerce shipping method — fee calculated from the selected delivery area**  
+✅ **Delivery Area shown on orders list, order edit, emails, My Account & REST API**  
 ✅ **CSV Export - Download all areas with fees**  
 ✅ **CSV Import - Upload your own CSV files with fees**  
 ✅ **Excel Compatible - Edit in Excel, save as CSV, upload**  
@@ -72,10 +104,12 @@ The plugin includes a professional CSV export/import system:
 
 ## Compatibility
 
-- WooCommerce 5.0+
+- WooCommerce 5.0+ (tested up to 10.9, HPOS-compatible)
 - WordPress 5.0+
 - PHP 7.4+
 - Works with Matrix Conditional Payments Pro plugin
+- Works with the Porto theme and the TCC Qatar Custom plugin (checkout field
+  ownership contract — see "Scope & architecture")
 
 ## Usage
 

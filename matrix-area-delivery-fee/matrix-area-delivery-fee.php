@@ -2,114 +2,160 @@
 /**
  * Plugin Name: Matrix Area Based Delivery Fee Customizer
  * Plugin URI: https://www.linkedin.com/in/mugamathubathusha/
- * Description: Advanced WooCommerce area-based delivery fee management with Qatar zones, automatic fee calculation, CSV import, drag & drop ordering, and backup/restore functionality.
- * Version: 1.2.0
+ * Description: WooCommerce area-based delivery for Qatar: a real shipping method priced by the Delivery Area (billing_city) dropdown, with CSV import/export, drag & drop ordering, and backup/restore.
+ * Version: 2.0.0
  * Author: Mugamathu Bathusha
  * Author URI: https://www.linkedin.com/in/mugamathubathusha/
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: matrix-area-delivery-fee
  * Requires at least: 5.0
- * Tested up to: 6.5
+ * Tested up to: 6.9
  * Requires PHP: 7.4
  * WC requires at least: 5.0
- * WC tested up to: 8.5
+ * WC tested up to: 10.9
+ *
+ * Scope (by design): this plugin owns the shipping method, the shipping
+ * calculation, the Delivery Area dropdown (billing_city) and how the area
+ * is surfaced on orders. All OTHER checkout field customisation (removed
+ * fields, required phone, field order, labels) lives in the TCC Qatar
+ * Custom plugin — see class-matrix-delivery-area.php for the contract.
+ *
+ * @package Matrix_Area_Delivery_Fee
  */
 
-// Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
+// Prevent direct access.
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
-// Declare WooCommerce HPOS compatibility
-add_action('before_woocommerce_init', function() {
-    if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
-        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', __FILE__, true);
-    }
-});
+define( 'MATRIX_AREA_DELIVERY_VERSION', '2.0.0' );
+define( 'MATRIX_AREA_DELIVERY_PATH', plugin_dir_path( __FILE__ ) );
 
-// Include admin class
-if (is_admin()) {
-    require_once plugin_dir_path(__FILE__) . 'includes/class-matrix-admin.php';
+/**
+ * Shipping method ID used throughout the plugin.
+ */
+if ( ! defined( 'MATRIX_AREA_DELIVERY_METHOD_ID' ) ) {
+	define( 'MATRIX_AREA_DELIVERY_METHOD_ID', 'matrix_area_delivery' );
 }
 
-// Check if WooCommerce is active
-if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-    
-    /**
-     * Modify WooCommerce billing_city field to dropdown with Qatar delivery areas
-     * Compatible with WooCommerce Conditional Payments plugin
-     * Uses billing_city field (not custom meta) to ensure compatibility
-     */
-    add_filter('woocommerce_billing_fields', function ($fields) {
+// Declare WooCommerce HPOS compatibility.
+add_action( 'before_woocommerce_init', function() {
+	if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
+		\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+	}
+} );
 
-        $fields['billing_city']['type'] = 'select';
-        $fields['billing_city']['label'] = __('Delivery Area – منطقة التوصيل', 'matrix-area-delivery-fee');
-        $fields['billing_city']['required'] = true;
-        $fields['billing_city']['class'] = array('form-row-wide');
+/**
+ * Boot the plugin once all plugins are loaded (multisite/mu-plugin safe,
+ * unlike inspecting the active_plugins option).
+ */
+add_action( 'plugins_loaded', 'matrix_area_delivery_init' );
 
-        // Get delivery areas from database
-        $saved_areas = get_option('matrix_delivery_areas');
-        
-        // Build options array
-        $options = array(
-            '' => __('Select Delivery Area', 'matrix-area-delivery-fee')
-        );
-        
-        if (!empty($saved_areas)) {
-            foreach ($saved_areas as $area) {
-                $options[$area['value']] = $area['en'] . ' - ' . $area['ar'];
-            }
-        }
-        
-        $fields['billing_city']['options'] = $options;
+function matrix_area_delivery_init() {
 
-        return $fields;
-    });
-    
-    /**
-     * Add delivery fee based on selected area
-     */
-    add_action('woocommerce_cart_calculate_fees', function() {
-        if (is_admin() && !defined('DOING_AJAX')) {
-            return;
-        }
+	if ( ! class_exists( 'WooCommerce' ) ) {
+		add_action( 'admin_notices', function() {
+			echo '<div class="error"><p><strong>Matrix Area Based Delivery Fee Customizer</strong> requires WooCommerce to be installed and active.</p></div>';
+		} );
+		return;
+	}
 
-        // Get the selected billing city
-        $billing_city = WC()->customer->get_billing_city();
-        
-        if (empty($billing_city)) {
-            return;
-        }
+	require_once MATRIX_AREA_DELIVERY_PATH . 'includes/class-matrix-delivery-area.php';
+	Matrix_Delivery_Area::instance();
 
-        // Get delivery areas with fees
-        $areas = get_option('matrix_delivery_areas');
-        
-        if (empty($areas)) {
-            return;
-        }
-
-        // Find the fee for the selected area
-        $fee_amount = 0;
-        foreach ($areas as $area) {
-            if ($area['value'] === $billing_city) {
-                $fee_amount = isset($area['fee']) ? floatval($area['fee']) : 0;
-                break;
-            }
-        }
-
-        // Add fee if greater than 0
-        if ($fee_amount > 0) {
-            WC()->cart->add_fee(__('Delivery Fee', 'matrix-area-delivery-fee'), $fee_amount);
-        } elseif ($fee_amount == 0) {
-            // Show free delivery
-            WC()->cart->add_fee(__('Delivery Fee', 'matrix-area-delivery-fee'), 0);
-        }
-    });
-    
-} else {
-    // Show admin notice if WooCommerce is not active
-    add_action('admin_notices', function() {
-        echo '<div class="error"><p><strong>Matrix Area Based Delivery Fee Customizer</strong> requires WooCommerce to be installed and active.</p></div>';
-    });
+	if ( is_admin() ) {
+		require_once MATRIX_AREA_DELIVERY_PATH . 'includes/class-matrix-admin.php';
+	}
 }
+
+/**
+ * Load the shipping method class once WooCommerce shipping is initialised
+ * (the parent WC_Shipping_Method class does not exist before that point).
+ */
+add_action( 'woocommerce_shipping_init', function() {
+	require_once MATRIX_AREA_DELIVERY_PATH . 'includes/class-matrix-shipping-method.php';
+} );
+
+/**
+ * Register the shipping method with WooCommerce.
+ */
+add_filter( 'woocommerce_shipping_methods', function( $methods ) {
+	$methods[ MATRIX_AREA_DELIVERY_METHOD_ID ] = 'Matrix_Area_Delivery_Method';
+	return $methods;
+} );
+
+/**
+ * Add the shipping method to the Qatar shipping zone (if present and not
+ * already added). Returns true once the method is present in a Qatar zone.
+ *
+ * @return bool
+ */
+function matrix_area_delivery_add_to_qatar_zone() {
+
+	if ( ! class_exists( 'WC_Shipping_Zones' ) ) {
+		return false;
+	}
+
+	$target_zone = null;
+
+	foreach ( WC_Shipping_Zones::get_zones() as $zone_data ) {
+		$zone = WC_Shipping_Zones::get_zone( $zone_data['id'] );
+		if ( ! $zone ) {
+			continue;
+		}
+
+		// Match by zone name containing "Qatar".
+		if ( stripos( $zone->get_zone_name(), 'qatar' ) !== false ) {
+			$target_zone = $zone;
+			break;
+		}
+
+		// Or match by a Qatar (QA) country location on the zone.
+		foreach ( $zone->get_zone_locations() as $location ) {
+			if ( 'country' === $location->type && 'QA' === strtoupper( $location->code ) ) {
+				$target_zone = $zone;
+				break 2;
+			}
+		}
+	}
+
+	if ( ! $target_zone ) {
+		return false;
+	}
+
+	// Already added? Then we're done.
+	foreach ( $target_zone->get_shipping_methods() as $method ) {
+		if ( isset( $method->id ) && MATRIX_AREA_DELIVERY_METHOD_ID === $method->id ) {
+			return true;
+		}
+	}
+
+	$target_zone->add_shipping_method( MATRIX_AREA_DELIVERY_METHOD_ID );
+	$target_zone->save();
+
+	return true;
+}
+
+/**
+ * On activation, flag that the Qatar zone needs the method, and try
+ * immediately in case WooCommerce shipping is already loaded.
+ */
+register_activation_hook( __FILE__, function() {
+	update_option( 'matrix_area_delivery_needs_zone_setup', 'yes' );
+	matrix_area_delivery_add_to_qatar_zone();
+} );
+
+/**
+ * Retry the zone setup once WooCommerce is fully loaded (covers activation
+ * while shipping zones weren't yet available). Clears the flag only once
+ * it succeeds.
+ */
+add_action( 'woocommerce_init', function() {
+	if ( 'yes' !== get_option( 'matrix_area_delivery_needs_zone_setup' ) ) {
+		return;
+	}
+	if ( matrix_area_delivery_add_to_qatar_zone() ) {
+		delete_option( 'matrix_area_delivery_needs_zone_setup' );
+	}
+} );
