@@ -3,7 +3,7 @@
  * Plugin Name: Matrix Area Based Delivery Fee Customizer
  * Plugin URI: https://www.linkedin.com/in/mugamathubathusha/
  * Description: WooCommerce area-based delivery for Qatar: a real shipping method priced by the Delivery Area (billing_city) dropdown, with CSV import/export, drag & drop ordering, and backup/restore.
- * Version: 2.0.2
+ * Version: 2.0.3
  * Author: Mugamathu Bathusha
  * Author URI: https://www.linkedin.com/in/mugamathubathusha/
  * License: GPL v2 or later
@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MATRIX_AREA_DELIVERY_VERSION', '2.0.2' );
+define( 'MATRIX_AREA_DELIVERY_VERSION', '2.0.3' );
 define( 'MATRIX_AREA_DELIVERY_PATH', plugin_dir_path( __FILE__ ) );
 
 /**
@@ -84,6 +84,44 @@ add_filter( 'woocommerce_shipping_methods', function( $methods ) {
 	$methods[ MATRIX_AREA_DELIVERY_METHOD_ID ] = 'Matrix_Area_Delivery_Method';
 	return $methods;
 } );
+
+/**
+ * Show "FREE" instead of a blank amount when the selected area has a zero
+ * delivery fee. WooCommerce prints only the label for a zero-cost rate, which
+ * left the checkout showing "Delivery Fee" with an empty price and looked like
+ * the fee had failed to calculate.
+ *
+ * Only applies once an area is actually selected — before that, a zero cost
+ * means "not calculated yet", not "free".
+ *
+ * @param string           $label  Rate label markup.
+ * @param WC_Shipping_Rate $method Shipping rate.
+ * @return string
+ */
+add_filter( 'woocommerce_cart_shipping_method_full_label', function( $label, $method ) {
+
+	if ( ! is_object( $method ) || MATRIX_AREA_DELIVERY_METHOD_ID !== $method->get_method_id() ) {
+		return $label;
+	}
+
+	if ( (float) $method->get_cost() > 0 ) {
+		return $label;
+	}
+
+	if ( ! class_exists( 'Matrix_Delivery_Area' ) ) {
+		return $label;
+	}
+
+	if ( '' === (string) Matrix_Delivery_Area::instance()->get_selected_area() ) {
+		return $label;
+	}
+
+	$free = Matrix_Delivery_Area::is_arabic()
+		? 'مجاناً'
+		: __( 'FREE', 'matrix-area-delivery-fee' );
+
+	return $label . ': <span class="matrix-free-delivery-fee">' . esc_html( $free ) . '</span>';
+}, 10, 2 );
 
 /**
  * Add the shipping method to the Qatar shipping zone (if present and not

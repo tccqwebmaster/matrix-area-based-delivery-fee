@@ -2,6 +2,16 @@
 
 All notable changes to Matrix Area Based Delivery Fee Customizer will be documented in this file.
 
+## [2.0.3] - 2026-07-18
+
+### Fixed
+- **Zero-fee areas showed a blank amount at checkout.** WooCommerce prints only
+  the label for a zero-cost rate, so an area with a 0 fee rendered as
+  "Delivery Fee" with an empty price and looked like the calculation had
+  failed. It now reads "Delivery Fee: FREE" (Arabic: مجاناً). The wording only
+  appears once an area is selected — before that, a 0 cost still means "not
+  calculated yet", so nothing is added.
+
 ## [2.0.2] - 2026-07-16
 
 ### Fixed
