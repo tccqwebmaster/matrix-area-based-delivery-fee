@@ -1,6 +1,6 @@
 # Matrix Area Based Delivery Fee Customizer
 
-**Version:** 2.0.3  
+**Version:** 2.1.0  
 **Author:** Mugamathu Bathusha  
 **License:** GPL v2 or later
 
@@ -17,6 +17,8 @@ This plugin is responsible **only** for shipping/delivery:
 - The **Delivery Area dropdown** (the `billing_city` field — kept on
   billing_city for compatibility with WooCommerce addresses, shipping zones,
   Conditional Payments, HPOS and checkout AJAX)
+- The **cart shipping calculator** — the same Delivery Area dropdown, with the
+  totals refreshing as soon as an area is chosen
 - Surfacing the area on orders: order edit screen, orders-list column
   (HPOS + legacy), emails, My Account order view, and REST API order
   `meta_data` (`_matrix_delivery_area`, `_matrix_delivery_area_label`)
@@ -34,7 +36,10 @@ includes/class-matrix-delivery-area.php Area repository + dropdown + order
                                         meta/columns/emails/REST surfacing
 includes/class-matrix-shipping-method.php  WC_Shipping_Method subclass
                                         (loaded on woocommerce_shipping_init)
+includes/class-matrix-cart-calculator.php  Delivery Area dropdown + instant
+                                        totals in the cart calculator
 includes/class-matrix-admin.php         Admin UI (areas, CSV, backup)
+assets/js/cart-calculator.js            Submits the calculator on area change
 ```
 
 ---

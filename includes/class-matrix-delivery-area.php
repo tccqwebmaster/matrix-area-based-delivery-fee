@@ -200,6 +200,12 @@ class Matrix_Delivery_Area {
 	 * then the serialised post_data sent by update_order_review — this is
 	 * what keeps shipping in sync during checkout AJAX recalculation.
 	 *
+	 * The shipping city is consulted last: the cart's "Calculate shipping"
+	 * form writes the SHIPPING address, so without this the fee would stay
+	 * empty for any customer who had not already set a billing city.
+	 * Matrix_Cart_Calculator mirrors it back to billing, so this is a
+	 * fallback for the request that does the mirroring, not the usual path.
+	 *
 	 * @return string
 	 */
 	public function get_selected_area() {
@@ -207,11 +213,20 @@ class Matrix_Delivery_Area {
 
 		if ( function_exists( 'WC' ) && WC()->customer ) {
 			$city = (string) WC()->customer->get_billing_city();
+
+			if ( '' === $city ) {
+				$city = (string) WC()->customer->get_shipping_city();
+			}
 		}
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- read-only lookups inside WooCommerce's own checkout AJAX.
 		if ( '' === $city && isset( $_POST['billing_city'] ) ) {
 			$city = wc_clean( wp_unslash( $_POST['billing_city'] ) );
+		}
+
+		// The cart's "Calculate shipping" form, on the request that submits it.
+		if ( '' === $city && isset( $_POST['calc_shipping_city'] ) ) {
+			$city = wc_clean( wp_unslash( $_POST['calc_shipping_city'] ) );
 		}
 
 		if ( '' === $city && isset( $_POST['post_data'] ) ) {

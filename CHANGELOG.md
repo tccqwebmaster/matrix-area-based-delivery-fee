@@ -2,6 +2,29 @@
 
 All notable changes to Matrix Area Based Delivery Fee Customizer will be documented in this file.
 
+## [2.1.0] - 2026-07-19
+
+### Added
+- **The cart's "Calculate shipping" now offers the Delivery Area dropdown.**
+  It was a free-text city box: customers had to know an area's exact spelling,
+  and a typo silently produced free shipping. It now lists the same 73
+  configured areas as checkout, via the `woocommerce_form_field_args` filter
+  (WooCommerce builds that field with `woocommerce_form_field()`, so no
+  template override is needed).
+- **Picking an area updates the totals immediately** — no second click on
+  "Update totals". `assets/js/cart-calculator.js` submits the calculator on
+  change, posting `calc_shipping` as a hidden field because a scripted
+  `form.submit()` does not carry the submit button's value.
+
+### Fixed
+- `get_selected_area()` now falls back to the shipping city and to a posted
+  `calc_shipping_city`, and `Matrix_Cart_Calculator::mirror_area_to_billing()`
+  copies a calculator-chosen area onto billing_city when billing is empty.
+  Both are guards for stores WITHOUT "force shipping to the customer billing
+  address": there the calculator writes the shipping address only, and the fee
+  — which is keyed on billing_city — would come out free. No effect on
+  tccq.com, which has that setting enabled.
+
 ## [2.0.3] - 2026-07-18
 
 ### Fixed
