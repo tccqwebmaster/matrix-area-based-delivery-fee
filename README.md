@@ -1,6 +1,6 @@
 # Matrix Area Based Delivery Fee Customizer
 
-**Version:** 2.1.0  
+**Version:** 2.1.1  
 **Author:** Mugamathu Bathusha  
 **License:** GPL v2 or later
 

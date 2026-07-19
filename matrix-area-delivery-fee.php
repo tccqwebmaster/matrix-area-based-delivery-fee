@@ -3,7 +3,7 @@
  * Plugin Name: Matrix Area Based Delivery Fee Customizer
  * Plugin URI: https://www.linkedin.com/in/mugamathubathusha/
  * Description: WooCommerce area-based delivery for Qatar: a real shipping method priced by the Delivery Area (billing_city) dropdown, with CSV import/export, drag & drop ordering, and backup/restore.
- * Version: 2.1.0
+ * Version: 2.1.1
  * Author: Mugamathu Bathusha
  * Author URI: https://www.linkedin.com/in/mugamathubathusha/
  * License: GPL v2 or later
@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MATRIX_AREA_DELIVERY_VERSION', '2.1.0' );
+define( 'MATRIX_AREA_DELIVERY_VERSION', '2.1.1' );
 define( 'MATRIX_AREA_DELIVERY_PATH', plugin_dir_path( __FILE__ ) );
 define( 'MATRIX_AREA_DELIVERY_URL', plugin_dir_url( __FILE__ ) );
 

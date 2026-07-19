@@ -2,6 +2,28 @@
 
 All notable changes to Matrix Area Based Delivery Fee Customizer will be documented in this file.
 
+## [2.1.1] - 2026-07-19
+
+Both fixes found by testing 2.1.0 on staging in a real logged-in session.
+
+### Fixed
+- **The dropdown never appeared** (2.1.0 shipped it, nothing changed on the
+  cart). Porto overrides `cart/shipping-calculator.php` with hardcoded
+  `<input>` markup, so `woocommerce_form_field()` — and every server-side
+  filter on it — never runs for this field. The dropdown is now built in
+  `assets/js/cart-calculator.js` from options passed via `wp_localize_script`,
+  which leaves Porto's template alone and survives theme updates. The
+  `woocommerce_form_field_args` filter is kept for stock-template stores.
+- **Returning customers were quoted the wrong delivery fee.** The fee is keyed
+  on billing_city while the calculator writes the SHIPPING city, so a customer
+  with a stored billing city kept that area's fee no matter which area they
+  chose. Reproduced on staging: an account billing to Bani Hajer was quoted
+  its 25 QR while the cart read "Shipping to Al Aziziya" — an area configured
+  free. It could over- or under-charge. `mirror_area_to_billing()` now always
+  copies a valid chosen area onto billing_city (2.1.0 only did so when billing
+  was empty), so the customer's explicit choice wins and checkout opens on the
+  same area.
+
 ## [2.1.0] - 2026-07-19
 
 ### Added
