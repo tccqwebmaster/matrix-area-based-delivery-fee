@@ -12,7 +12,32 @@ class Matrix_Area_Delivery_Admin {
     public function __construct() {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'register_settings'));
+        // Handle the CSV export EARLY (before any admin HTML is rendered), so
+        // the download is the CSV alone — not the whole admin page.
+        add_action('admin_init', array($this, 'maybe_export_csv'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+    }
+
+    /**
+     * Stream the CSV export on admin_init and exit.
+     *
+     * Previously the export was triggered from inside settings_page() — the menu
+     * page's render callback — which runs only AFTER WordPress has already output
+     * the entire admin page (doctype, <head>, admin chrome). The CSV was then
+     * appended to all of that, so the downloaded .csv file actually contained the
+     * whole HTML page. Running here, before any output, fixes it.
+     */
+    public function maybe_export_csv() {
+        if (!isset($_POST['matrix_export_csv'])) {
+            return;
+        }
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+        // check_admin_referer() dies on an invalid nonce (standard behaviour).
+        check_admin_referer('matrix_export_csv_action', 'matrix_export_nonce');
+        $this->export_to_csv();
+        exit;
     }
 
     public function add_admin_menu() {
@@ -55,11 +80,8 @@ class Matrix_Area_Delivery_Admin {
     }
 
     public function settings_page() {
-        // Handle CSV Export
-        if (isset($_POST['matrix_export_csv']) && check_admin_referer('matrix_export_csv_action', 'matrix_export_nonce')) {
-            $this->export_to_csv();
-            exit;
-        }
+        // CSV Export is handled earlier on admin_init (maybe_export_csv), before
+        // any HTML is output — otherwise the download contains the whole page.
 
         // Handle form submissions
         if (isset($_POST['matrix_save_areas']) && check_admin_referer('matrix_save_areas_action', 'matrix_areas_nonce')) {
@@ -481,6 +503,12 @@ class Matrix_Area_Delivery_Admin {
             wp_die('No delivery areas to export.');
         }
 
+        // Discard anything already buffered (stray notices / output) so the CSV
+        // is the ONLY thing in the response body.
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
         // Set headers for CSV download
         $filename = 'delivery-areas-' . date('Y-m-d') . '.csv';
         header('Content-Type: text/csv; charset=utf-8');
@@ -508,6 +536,7 @@ class Matrix_Area_Delivery_Admin {
         }
 
         fclose($output);
+        exit;
     }
 
     public function import_from_uploaded_csv() {

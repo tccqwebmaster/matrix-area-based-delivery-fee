@@ -2,7 +2,20 @@
 
 All notable changes to Matrix Area Based Delivery Fee Customizer will be documented in this file.
 
-## [2.1.1] - 2026-07-19
+## [2.1.2] - 2026-07-22
+
+### Fixed
+- **CSV export downloaded the whole admin page instead of the CSV.** "Export
+  Current Areas" produced a `delivery-areas-YYYY-MM-DD.csv` whose contents were
+  the entire WordPress admin HTML page (`<!DOCTYPE html>…`) with the CSV rows
+  buried at the very end. Cause: the export was triggered from inside
+  `settings_page()` — the menu page's render callback — which only runs *after*
+  WordPress has already output the full admin page, so the CSV was appended to
+  all of that HTML. Moved the export to run early on `admin_init`
+  (`maybe_export_csv()`), before any output, then `exit`; hardened
+  `export_to_csv()` to discard any buffered output before sending the headers
+  and to `exit` when done. The download is now the CSV alone (UTF-8 BOM intact
+  for Arabic). Capability + nonce checks unchanged.
 
 Both fixes found by testing 2.1.0 on staging in a real logged-in session.
 
