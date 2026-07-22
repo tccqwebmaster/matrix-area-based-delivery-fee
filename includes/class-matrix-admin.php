@@ -60,6 +60,18 @@ class Matrix_Area_Delivery_Admin {
         if ($hook != 'toplevel_page_matrix-area-delivery-fee') {
             return;
         }
+
+        // Drag-and-drop reordering library, bundled locally instead of loaded
+        // from a public CDN pinned to @latest (which could change under us, has
+        // no integrity hash, and breaks if the CDN is blocked). Loaded in the
+        // <head> so the inline initialiser on the page can use it.
+        wp_enqueue_script(
+            'matrix-sortable',
+            MATRIX_AREA_DELIVERY_URL . 'assets/js/sortable.min.js',
+            array(),
+            '1.15.6',
+            false
+        );
         ?>
         <style>
             .matrix-admin-wrap { max-width: 1200px; margin: 20px 0; }
@@ -75,8 +87,39 @@ class Matrix_Area_Delivery_Admin {
             .matrix-backup-section { background: #fff3cd; padding: 15px; margin: 20px 0; border-left: 4px solid #ffc107; border-radius: 5px; }
             .matrix-dragging { opacity: 0.5; background: #e3f2fd; }
         </style>
-        <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
         <?php
+    }
+
+    /**
+     * Neutralise CSV/Excel formula injection. A cell whose first character is
+     * =, +, -, @, tab or CR is executed as a formula when the CSV is opened in
+     * a spreadsheet app, so prefix a single quote to force it to plain text.
+     * import_from_uploaded_csv() strips this quote back off on the round trip.
+     *
+     * @param string $value Cell value.
+     * @return string
+     */
+    private function csv_escape($value) {
+        $value = (string) $value;
+        if ('' !== $value && false !== strpos("=+-@\t\r", $value[0])) {
+            return "'" . $value;
+        }
+        return $value;
+    }
+
+    /**
+     * Reverse csv_escape(): drop a single leading quote added for spreadsheet
+     * safety, so an exported-then-reimported value round-trips unchanged.
+     *
+     * @param string $value Cell value.
+     * @return string
+     */
+    private function csv_unescape($value) {
+        $value = (string) $value;
+        if ('' !== $value && "'" === $value[0]) {
+            return substr($value, 1);
+        }
+        return $value;
     }
 
     public function settings_page() {
@@ -155,7 +198,7 @@ class Matrix_Area_Delivery_Admin {
                         <button type="submit" name="matrix_export_csv" class="button button-primary">
                             📥 Download CSV Export
                         </button>
-                        <span style="margin-left: 10px; color: #666;">💾 File: <strong>delivery-areas-<?php echo date('Y-m-d'); ?>.csv</strong></span>
+                        <span style="margin-left: 10px; color: #666;">💾 File: <strong>delivery-areas-<?php echo esc_html(current_time('Y-m-d')); ?>.csv</strong></span>
                     </form>
                 </div>
 
@@ -509,8 +552,8 @@ class Matrix_Area_Delivery_Admin {
             ob_end_clean();
         }
 
-        // Set headers for CSV download
-        $filename = 'delivery-areas-' . date('Y-m-d') . '.csv';
+        // Set headers for CSV download (store timezone, not the server's).
+        $filename = 'delivery-areas-' . current_time('Y-m-d') . '.csv';
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Pragma: no-cache');
@@ -525,13 +568,14 @@ class Matrix_Area_Delivery_Admin {
         // Write header row
         fputcsv($output, array('Fee (QAR)', 'Area Name (English)', 'Area Name (Arabic)', 'Value'));
 
-        // Write data rows
+        // Write data rows (string cells guarded against spreadsheet formula
+        // injection; the fee is numeric so it needs no guard).
         foreach ($areas as $area) {
             fputcsv($output, array(
                 isset($area['fee']) ? $area['fee'] : 0,
-                $area['en'],
-                $area['ar'],
-                $area['value']
+                $this->csv_escape($area['en']),
+                $this->csv_escape($area['ar']),
+                $this->csv_escape($area['value'])
             ));
         }
 
@@ -575,9 +619,10 @@ class Matrix_Area_Delivery_Admin {
                 continue;
             }
 
-            $en_value = trim($row[1]);
-            $ar_value = trim($row[2]);
-            $value = trim($row[3]);
+            // Strip the leading quote our export adds for spreadsheet safety.
+            $en_value = $this->csv_unescape(trim($row[1]));
+            $ar_value = $this->csv_unescape(trim($row[2]));
+            $value = $this->csv_unescape(trim($row[3]));
             $fee = isset($row[0]) ? floatval($row[0]) : 0;
 
             if (!empty($en_value) && !empty($ar_value) && !empty($value)) {

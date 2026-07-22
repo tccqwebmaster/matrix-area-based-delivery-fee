@@ -17,6 +17,21 @@ All notable changes to Matrix Area Based Delivery Fee Customizer will be documen
   and to `exit` when done. The download is now the CSV alone (UTF-8 BOM intact
   for Arabic). Capability + nonce checks unchanged.
 
+### Changed
+- **SortableJS is now bundled locally** (`assets/js/sortable.min.js`, v1.15.6,
+  enqueued) instead of loaded from `cdn.jsdelivr.net/npm/sortablejs@latest`.
+  The `@latest` pin could change under us with no integrity hash, and drag-and-drop
+  reordering silently broke wherever the CDN was blocked. No external request now.
+- **Export filename uses the store timezone** (`current_time('Y-m-d')` instead of
+  the server's `date('Y-m-d')`).
+
+### Security
+- **CSV formula-injection hardening on export.** String cells (area names / value)
+  beginning with `=`, `+`, `-`, `@`, tab or CR are prefixed with a single quote so
+  a spreadsheet app renders them as text rather than executing them as a formula.
+  The uploaded-CSV importer strips that quote back off, so export → edit → re-import
+  round-trips unchanged.
+
 Both fixes found by testing 2.1.0 on staging in a real logged-in session.
 
 ### Fixed
