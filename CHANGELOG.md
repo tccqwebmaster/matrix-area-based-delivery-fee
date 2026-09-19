@@ -2,6 +2,18 @@
 
 All notable changes to Matrix Area Based Delivery Fee Customizer will be documented in this file.
 
+## [2.2.0] - 2026-09-19
+
+### Added
+- **Minimum order for free-delivery areas.** New setting on the Delivery Areas
+  page ("🛒 Minimum Order for Free-Delivery Areas", option
+  `matrix_free_area_min_order`, 0 = off). When the selected area's fee is 0 and
+  the order (products after coupons, delivery excluded) is below the minimum,
+  a bilingual notice appears in the cart totals and the checkout order review,
+  and checkout is refused with the same message. Paid areas and orders that
+  need no shipping are unaffected. TCC Qatar: free inside-Doha areas need
+  QR 70.
+
 ## [2.1.2] - 2026-07-22
 
 ### Fixed

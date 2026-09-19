@@ -47,6 +47,12 @@ class Matrix_Delivery_Area {
 	const COLUMN_KEY = 'matrix_delivery_area';
 
 	/**
+	 * Option: minimum order value (QAR) for delivery to FREE areas (fee 0).
+	 * 0 = no minimum. Set on the Delivery Areas admin page.
+	 */
+	const MIN_ORDER_OPTION = 'matrix_free_area_min_order';
+
+	/**
 	 * Singleton instance.
 	 *
 	 * @var Matrix_Delivery_Area|null
@@ -78,6 +84,12 @@ class Matrix_Delivery_Area {
 
 		// Only a configured area may be submitted.
 		add_action( 'woocommerce_after_checkout_validation', array( $this, 'validate_area' ), 10, 2 );
+
+		// Minimum order for free-delivery areas: shown in the checkout order
+		// review (the AJAX fragment, so it follows area/cart changes) and in
+		// the cart totals; enforced in validate_area().
+		add_action( 'woocommerce_review_order_before_payment', array( $this, 'render_min_order_notice' ) );
+		add_action( 'woocommerce_before_cart_totals', array( $this, 'render_min_order_notice' ) );
 
 		// Persist to order meta (HPOS-safe CRUD) and surface everywhere.
 		add_action( 'woocommerce_checkout_create_order', array( $this, 'save_order_meta' ), 10, 2 );
@@ -307,7 +319,110 @@ class Matrix_Delivery_Area {
 					? 'يرجى اختيار منطقة توصيل صحيحة من القائمة.'
 					: __( 'Please select a valid Delivery Area from the list.', 'matrix-area-delivery-fee' )
 			);
+			return;
 		}
+
+		$shortfall = $this->min_order_shortfall( $city );
+		if ( $shortfall > 0 ) {
+			$errors->add( 'matrix_min_order', $this->min_order_message( $city, $shortfall ) );
+		}
+	}
+
+	/* ---------------------------------------------------------------------
+	 * Minimum order for free-delivery areas.
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Configured minimum (QAR) for free areas; 0 = no minimum.
+	 *
+	 * @return float
+	 */
+	public function free_area_minimum() {
+		return max( 0.0, (float) get_option( self::MIN_ORDER_OPTION, 0 ) );
+	}
+
+	/**
+	 * Order value the minimum is measured against: the cart's products after
+	 * coupon discounts (incl. tax, if any) — delivery excluded. Same basis as
+	 * WooCommerce's own "Free shipping → minimum order amount".
+	 *
+	 * @return float
+	 */
+	private function cart_order_value() {
+		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+			return 0.0;
+		}
+		return (float) WC()->cart->get_cart_contents_total() + (float) WC()->cart->get_cart_contents_tax();
+	}
+
+	/**
+	 * How much more the customer must add to be delivered to $area_value,
+	 * or 0 when no minimum applies.
+	 *
+	 * Applies only when: a minimum is set, the area exists and is FREE
+	 * (fee 0 — the inside-Doha areas), and the cart needs delivery at all
+	 * (digital gift-card-only orders are exempt). Paid areas never have a
+	 * minimum — they pay their fee.
+	 *
+	 * @param string $area_value Selected area (billing_city value).
+	 * @return float
+	 */
+	public function min_order_shortfall( $area_value ) {
+		$minimum = $this->free_area_minimum();
+		if ( $minimum <= 0 || '' === (string) $area_value ) {
+			return 0.0;
+		}
+		$area = $this->get_area( $area_value );
+		if ( ! $area || (float) ( $area['fee'] ?? 0 ) > 0 ) {
+			return 0.0;
+		}
+		if ( ! function_exists( 'WC' ) || ! WC()->cart || ! WC()->cart->needs_shipping() ) {
+			return 0.0;
+		}
+		$value = $this->cart_order_value();
+		return $value < $minimum ? round( $minimum - $value, wc_get_price_decimals() ) : 0.0;
+	}
+
+	/**
+	 * Bilingual "minimum order" message.
+	 *
+	 * @param string $area_value Area value.
+	 * @param float  $shortfall  Amount still missing.
+	 * @return string HTML (prices formatted by wc_price).
+	 */
+	public function min_order_message( $area_value, $shortfall ) {
+		$area    = $this->get_area( $area_value );
+		$minimum = wc_price( $this->free_area_minimum() );
+		$missing = wc_price( $shortfall );
+
+		if ( self::is_arabic() ) {
+			$name = $area['ar'] ?? (string) $area_value;
+			return sprintf( 'الحد الأدنى للطلب للتوصيل إلى %1$s هو %2$s. يرجى إضافة منتجات بقيمة %3$s إضافية لإتمام الطلب.', esc_html( $name ), $minimum, $missing );
+		}
+
+		$name = $area['en'] ?? (string) $area_value;
+		return sprintf(
+			/* translators: 1: area name, 2: minimum order amount, 3: amount still missing */
+			__( 'Minimum order for delivery to %1$s is %2$s. Please add %3$s more to place your order.', 'matrix-area-delivery-fee' ),
+			esc_html( $name ),
+			$minimum,
+			$missing
+		);
+	}
+
+	/**
+	 * Show the minimum-order notice in the checkout review / cart totals
+	 * while the selected free area's minimum is not met.
+	 */
+	public function render_min_order_notice() {
+		$area      = $this->get_selected_area();
+		$shortfall = $this->min_order_shortfall( $area );
+		if ( $shortfall <= 0 ) {
+			return;
+		}
+		echo '<div class="woocommerce-error matrix-min-order-notice" role="alert" style="margin:0 0 1em">'
+			. wp_kses_post( $this->min_order_message( $area, $shortfall ) )
+			. '</div>';
 	}
 
 	/* ---------------------------------------------------------------------
