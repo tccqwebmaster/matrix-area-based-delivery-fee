@@ -169,6 +169,12 @@ class Matrix_Area_Delivery_Admin {
             }
         }
 
+        if (isset($_POST['matrix_save_min_order']) && check_admin_referer('matrix_min_order_action', 'matrix_min_order_nonce')) {
+            $min = isset($_POST['matrix_free_area_min_order']) ? max(0, floatval(wp_unslash($_POST['matrix_free_area_min_order']))) : 0;
+            update_option(Matrix_Delivery_Area::MIN_ORDER_OPTION, $min);
+            echo '<div class="matrix-notice">✅ Minimum order for free-delivery areas saved: ' . esc_html($min > 0 ? 'QAR ' . $min : 'no minimum') . '</div>';
+        }
+
         if (isset($_POST['matrix_sort_areas']) && check_admin_referer('matrix_sort_areas_action', 'matrix_sort_nonce')) {
             $this->sort_areas_alphabetically();
             echo '<div class="matrix-notice">✅ Areas sorted alphabetically!</div>';
@@ -229,6 +235,20 @@ class Matrix_Area_Delivery_Admin {
                         <span style="margin-left: 10px; color: #666;">File: <code>area.csv</code></span>
                     </form>
                 </div>
+            </div>
+
+            <!-- Minimum order for free-delivery areas -->
+            <?php $matrix_min_order = (float) get_option(Matrix_Delivery_Area::MIN_ORDER_OPTION, 0); ?>
+            <div style="background: #fff; padding: 20px; margin: 20px 0; border: 1px solid #ccc; border-left: 4px solid #7c3aed; border-radius: 5px;">
+                <h2 style="margin-top: 0;">🛒 Minimum Order for Free-Delivery Areas</h2>
+                <p>Areas with fee <strong>0 (free)</strong> are delivered only when the order is at least this amount (products after coupons, delivery excluded). Below it, checkout shows a message and the order cannot be placed. Paid areas have no minimum. <strong>0 = no minimum.</strong></p>
+                <form method="post" action="">
+                    <?php wp_nonce_field('matrix_min_order_action', 'matrix_min_order_nonce'); ?>
+                    <label for="matrix_free_area_min_order"><strong>Minimum order (QAR):</strong></label>
+                    <input type="number" step="0.01" min="0" id="matrix_free_area_min_order" name="matrix_free_area_min_order" value="<?php echo esc_attr($matrix_min_order); ?>" style="width: 120px; margin: 0 10px;" />
+                    <button type="submit" name="matrix_save_min_order" class="button button-primary">💾 Save Minimum</button>
+                    <span style="margin-left: 10px; color: #666;">Currently: <strong><?php echo $matrix_min_order > 0 ? 'QAR ' . esc_html($matrix_min_order) : 'no minimum'; ?></strong></span>
+                </form>
             </div>
 
             <!-- Backup & Restore Section -->

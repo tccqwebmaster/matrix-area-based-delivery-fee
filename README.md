@@ -137,6 +137,22 @@ The plugin includes a professional CSV export/import system:
 - QAR 75: Al Khor
 - QAR 100: Dukhan
 
+### Minimum Order for Free-Delivery Areas (2.2.0)
+**Delivery Areas → 🛒 Minimum Order for Free-Delivery Areas.** Areas whose fee is
+**0 (free)** — the inside-Doha areas — are delivered only when the order reaches
+this amount (e.g. **70**). Below it:
+- the cart totals and the checkout order review show, in English or Arabic,
+  *"Minimum order for delivery to Al Aziziya is QR 70. Please add QR 20 more to
+  place your order."* (the review is the checkout AJAX fragment, so it updates
+  when the area or cart changes);
+- **Place order** is refused with the same message (`woocommerce_after_checkout_validation`).
+
+Measured on the products after coupon discounts (delivery excluded) — the same
+basis as WooCommerce's own free-shipping minimum. Paid areas never have a
+minimum; orders that need no delivery (e.g. digital gift cards only) are exempt.
+**0 = no minimum.** Stored in the `matrix_free_area_min_order` option;
+`Matrix_Delivery_Area::min_order_shortfall( $area )` returns the missing amount.
+
 ### CSV Export/Import Workflow
 
 **Perfect for bulk editing:**
