@@ -342,9 +342,13 @@ class Matrix_Delivery_Area {
 	}
 
 	/**
-	 * Order value the minimum is measured against: the cart's products after
-	 * coupon discounts (incl. tax, if any) — delivery excluded. Same basis as
-	 * WooCommerce's own "Free shipping → minimum order amount".
+	 * Order value the minimum is measured against: the cart's products that
+	 * actually get delivered, after coupon discounts (incl. tax, if any) —
+	 * delivery excluded.
+	 *
+	 * Virtual items (digital gift-card codes) do NOT count: otherwise a QR 10
+	 * case plus a QR 105 iTunes code reached the QR 70 minimum and the case
+	 * was delivered free.
 	 *
 	 * @return float
 	 */
@@ -352,7 +356,15 @@ class Matrix_Delivery_Area {
 		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
 			return 0.0;
 		}
-		return (float) WC()->cart->get_cart_contents_total() + (float) WC()->cart->get_cart_contents_tax();
+		$value = 0.0;
+		foreach ( WC()->cart->get_cart() as $item ) {
+			$product = $item['data'] ?? null;
+			if ( ! $product instanceof WC_Product || ! $product->needs_shipping() ) {
+				continue;
+			}
+			$value += (float) ( $item['line_total'] ?? 0 ) + (float) ( $item['line_tax'] ?? 0 );
+		}
+		return $value;
 	}
 
 	/**
@@ -361,7 +373,8 @@ class Matrix_Delivery_Area {
 	 *
 	 * Applies only when: a minimum is set, the area exists and is FREE
 	 * (fee 0 — the inside-Doha areas), and the cart needs delivery at all
-	 * (digital gift-card-only orders are exempt). Paid areas never have a
+	 * (digital gift-card-only orders are exempt), and only delivered items
+	 * count toward it. Paid areas never have a
 	 * minimum — they pay their fee.
 	 *
 	 * @param string $area_value Selected area (billing_city value).
