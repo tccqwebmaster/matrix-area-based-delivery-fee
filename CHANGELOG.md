@@ -2,6 +2,15 @@
 
 All notable changes to Matrix Area Based Delivery Fee Customizer will be documented in this file.
 
+## [2.2.1] - 2026-10-31
+
+### Fixed
+- **Digital gift cards unlocked free delivery.** The free-area minimum counted
+  virtual items, so a QR 10 case plus a PayThem gift-card code (e.g. iTunes
+  QR 105) passed the QR 70 minimum and the case was delivered free (orders
+  #56266, #56267, #56272). The minimum is now measured only on cart lines that
+  need shipping (`WC_Product::needs_shipping()`), after coupons, incl. tax.
+
 ## [2.2.0] - 2026-09-19
 
 ### Added

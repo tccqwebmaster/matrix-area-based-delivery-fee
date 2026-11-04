@@ -147,9 +147,11 @@ this amount (e.g. **70**). Below it:
   when the area or cart changes);
 - **Place order** is refused with the same message (`woocommerce_after_checkout_validation`).
 
-Measured on the products after coupon discounts (delivery excluded) — the same
-basis as WooCommerce's own free-shipping minimum. Paid areas never have a
-minimum; orders that need no delivery (e.g. digital gift cards only) are exempt.
+Measured on the **delivered** products after coupon discounts (delivery
+excluded). Virtual items — digital gift-card codes (PayThem) — do not count
+toward the minimum (2.2.1), so a QR 10 case plus a gift card still needs the
+case alone to reach QR 70. Paid areas never have a minimum; orders that need no
+delivery (e.g. digital gift cards only) are exempt.
 **0 = no minimum.** Stored in the `matrix_free_area_min_order` option;
 `Matrix_Delivery_Area::min_order_shortfall( $area )` returns the missing amount.
 
